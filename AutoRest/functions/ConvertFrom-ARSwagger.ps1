@@ -164,6 +164,8 @@
 			patch  = "Set"
 			delete = "Remove"
 		}
+		
+		[PSFramework.Message.MessageLevel]$logLevel = Get-PSFConfigValue -FullName AutoRest.Logging.Level -Fallback "Warning"
 	}
 	process {
 		#region Process Swagger file
@@ -175,7 +177,7 @@
 				foreach ($method in $endpoint.Value.PSObject.Properties) {
 					$commandKey = $endpointPath, $method.Name -join ":"
 					$commandOverrides = $overrides.$commandKey
-					if ($script:logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
+					if ($logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
 						Write-PSFMessage "Processing Command: $($commandKey)"
 					}
 					#region Case: Existing Command
@@ -193,7 +195,7 @@
 									continue
 								}
 							}
-							if ($script:logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
+							if ($logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
 								Write-PSFMessage "  Processing Parameter: $($parameter.Name) ($($parameter.in))"
 							}
 							switch ($parameter.in) {
@@ -309,7 +311,7 @@
 									continue
 								}
 							}
-							if ($script:logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
+							if ($logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
 								# This is on hot path. Checking if we should write the message in a cheap way.
 								Write-PSFMessage "  Processing Parameter: $($parameter.Name) ($($parameter.in))"
 							}
@@ -395,7 +397,7 @@
 					}
 					#endregion Case: New Command
 
-					if ($script:logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
+					if ($logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
 						Write-PSFMessage -Message "Finished processing $($endpointPath) : $($method.Name) --> $($commandObject.Name)" -Target $commandObject -Data @{
 							Overrides     = $overrides
 							CommandObject = $commandObject
