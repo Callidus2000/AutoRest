@@ -286,7 +286,8 @@
 						}
 						if ($ServiceName) { $commandObject.ServiceName = $ServiceName }
 						$commands[$commandKey] = $commandObject
-
+						
+						# Apply Overrides
 						foreach ($property in $commands[$commandKey].PSObject.Properties) {
 							if ($property.Name -eq 'Parameters') { continue }
 							if ($overrides.$commandKey.$($property.Name)) { $commandObject.$($property.Name) = $overrides.$commandKey.$($property.Name) }

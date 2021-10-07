@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## ???
+
++ Upd: Added Support for ShouldProcess
++ Upd: Automatically include a PSScriptAnalyzer exemption for ShouldProcess in commands that have state-changing verbs, unless ShouldProcess is provided for
+
 ## 0.1.4 (2021-10-01)
 
 + Upd: Added option to export commands without help

@@ -15,6 +15,9 @@
     [string]$RestCommand
     [string]$ProcessorCommand
 
+	[string]$ShouldProcess
+	[string]$ShouldProcessTarget
+
     [string]ToExample() {
         $format = @'
 .EXAMPLE
@@ -67,15 +70,34 @@
     {4}
 #>
 '@
-        $parameterHelp = $this.Parameters.Values | Sort-Object Weight | ForEach-Object ToHelp | Join-String -Separator "`n`n"
+		$parameterHelp = $this.Parameters.Values | Sort-Object Weight | ForEach-Object ToHelp | Join-String -Separator "`n`n"
+		if ($this.ShouldProcess) {
+			$shouldPropcessHelp = @'
+.PARAMETER Confirm
+	If this switch is enabled, you will be prompted for confirmation before executing any operations that change state.
+
+.PARAMETER WhatIf
+	If this switch is enabled, no actions are performed but informational messages will be displayed that explain what would happen if the command were to run.
+'@
+			$parameterHelp = $parameterHelp, $shouldPropcessHelp -join "`n`n"
+		}
         $descriptionText = $this.Description
         if ($this.Scopes) { $descriptionText = $descriptionText, ('    Scopes required (delegate auth): {0}' -f ($this.Scopes -join ", ")) -join "`n`n" }
         return $format -f $this.Synopsis, $descriptionText, $parameterHelp, $this.ToExample(), $this.DocumentationUrl
     }
+	
+	[string]ToParam() {
+		$shouldProcessString = ''
+		if (-not $this.ShouldProcess -and $this.Name -match '^New-|^Remove-|^Set-') {
+			$shouldProcessString = @'
+	[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseShouldProcessForStateChangingFunctions", "")]
 
-    [string]ToParam() {
-        return @"
-    [CmdletBinding(DefaultParameterSetName = 'default')]
+'@
+		}
+		$supportsShouldProcess = ''
+		if ($this.ShouldProcess) { $supportsShouldProcess = ', SupportsShouldProcess = $true' }
+		return @"
+$shouldProcessString    [CmdletBinding(DefaultParameterSetName = 'default'$($supportsShouldProcess))]
     param (
 $($this.Parameters.Values | Sort-Object Weight | ForEach-Object ToParam | Join-String ",`n`n")
     )
@@ -90,6 +112,7 @@ $($this.Parameters.Values | Sort-Object Weight | ForEach-Object ToParam | Join-S
         $__body = $PSBoundParameters | ConvertTo-HashTable -Include {0} -Mapping $__mapping
         $__query = $PSBoundParameters | ConvertTo-HashTable -Include {1} -Mapping $__mapping
         $__path = '{2}'{3}
+{10}
         {4} -Path $__path -Method {5} -Body $__body -Query $__query{6}{7}{8}
 '@
         $bodyString = '@({0})' -f (($this.Parameters.Values | Where-Object Type -EQ Body).Name | Add-String "'" "'" | Join-String ",")
@@ -111,8 +134,15 @@ $($this.Parameters.Values | Sort-Object Weight | ForEach-Object ToParam | Join-S
         $serviceString = ''
         if ($this.ServiceName) { $serviceString = " -Service $($this.ServiceName)" }
         $mappingString = $this.Parameters.Values | Where-Object Type -NE Path | Format-String -Format "            '{0}' = '{1}'" -Property Name, SystemName | Join-String "`n"
-
-        return $format -f $bodyString, $queryString, $this.EndpointUrl, $pathReplacement, $this.RestCommand, $this.Method, $scopesString, $serviceString, $processorString, $mappingString
+		$shouldProcessString = ''
+		if ($this.ShouldProcess) {
+			$target = $this.ShouldProcessTarget
+			if (-not $target) { $target = '${0}' -f @(@($this.Parameters.Keys).Where{ $_ -like "*ID" })[0] }
+			if (-not $target) { $target = '<target>' }
+			$shouldProcessString = '        if (-not $PSCmdlet.ShouldProcess("{0}","{1}")) {{ return }}' -f $target, $this.ShouldProcess
+		}
+		
+        return $format -f $bodyString, $queryString, $this.EndpointUrl, $pathReplacement, $this.RestCommand, $this.Method, $scopesString, $serviceString, $processorString, $mappingString, $shouldProcessString
     }
 	
 	[string]ToCommand([bool]$NoHelp = $false) {
