@@ -63,7 +63,8 @@
 	begin
 	{
 		$encoding = [System.Text.UTF8Encoding]::new($true)
-		$targetFolder = Resolve-PSFPath $Path		
+		$targetFolder = Resolve-PSFPath $Path
+		[PSFramework.Message.MessageLevel]$logLevel = Get-PSFConfigValue -FullName AutoRest.Logging.Level -Fallback "Warning"
 	}
 	process
 	{
@@ -79,11 +80,13 @@
 				$null = New-Item -Path $folder -ItemType Directory -Force
 			}
 			$filePath = Join-Path -Path $folder -ChildPath "$($commandObject.Name).ps1"
-			if ($script:logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
-				if (-not $Force -and (Test-Path -Path $filePath)) {
+			if (-not $Force -and (Test-Path -Path $filePath)) {
+				if ($logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
 					Write-PSFMessage -Message "Skipping $($commandObject.Name), as $filePath already exists." -Target $commandObject
 				}
-
+				continue
+			}
+			if ($logLevel -le [PSFramework.Message.MessageLevel]::Verbose) {
 				Write-PSFMessage -Message "Writing $($commandObject.Name) to $filePath" -Target $commandObject
 			}
 			try { [System.IO.File]::WriteAllText($filePath, $commandObject.ToCommand($NoHelp.ToBool()), $encoding) }
